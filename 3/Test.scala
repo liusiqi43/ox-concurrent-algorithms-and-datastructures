@@ -28,7 +28,7 @@ object Test {
 
   def main(args: Array[String]) {
     val t0 = System.nanoTime
-    for (i <- 0 until 10000) {
+    for (i <- 0 until 1000) {
       val concQueue = new LC
       val seqQueue = Queue[Int]()
       val tester = new DFSLinearizabilityTester(seqQueue, concQueue, 4, worker _, 800)
@@ -37,7 +37,7 @@ object Test {
     println("[Lock-based queue] time taken: " + (System.nanoTime - t0)/1e6 + "ms")
 
     val t1 = System.nanoTime
-    for (i <- 0 until 10000) {
+    for (i <- 0 until 1000) {
       val concQueue = new LFC
       val seqQueue = Queue[Int]()
       val tester = new DFSLinearizabilityTester(seqQueue, concQueue, 4, worker _, 800)
