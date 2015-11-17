@@ -19,7 +19,7 @@ object Test {
     val random = new scala.util.Random
     for (i <- 0 until 200) {
       if(random.nextFloat <= 0.3){
-        val x = random.nextInt(1000)
+        val x = random.nextInt(100000)
         tester.log(me, _.enqueue(x), "enqueue("+x+")", seqEnqueue(x))
       }
       else tester.log(me, _.dequeue, "dequeue", seqDequeue)
@@ -27,8 +27,10 @@ object Test {
   }
 
   def main(args: Array[String]) {
+    val reps = args(0).toInt
+
     val t0 = System.nanoTime
-    for (i <- 0 until 1000) {
+    for (i <- 0 until reps) {
       val concQueue = new LC
       val seqQueue = Queue[Int]()
       val tester = new DFSLinearizabilityTester(seqQueue, concQueue, 4, worker _, 800)
@@ -37,7 +39,7 @@ object Test {
     println("[Lock-based queue] time taken: " + (System.nanoTime - t0)/1e6 + "ms")
 
     val t1 = System.nanoTime
-    for (i <- 0 until 1000) {
+    for (i <- 0 until reps) {
       val concQueue = new LFC
       val seqQueue = Queue[Int]()
       val tester = new DFSLinearizabilityTester(seqQueue, concQueue, 4, worker _, 800)

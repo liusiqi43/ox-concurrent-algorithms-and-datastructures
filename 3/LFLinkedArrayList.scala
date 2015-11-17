@@ -31,8 +31,11 @@ class LFLinkedArrayList [T: ClassTag] extends ox.cads.collection.Queue[T] {
           }
           // tailIndex == size --> node is full
           // Invariant: tailIndex <= size
+        while (tailIndex < size && tailNode.data.get(tailIndex) != null) {
           tailNode.tail.compareAndSet(tailIndex, tailIndex+1)
           tailIndex = tailNode.tail.get
+        }
+
         }
       } else {
         // tail node is full.
@@ -43,6 +46,7 @@ class LFLinkedArrayList [T: ClassTag] extends ox.cads.collection.Queue[T] {
         if (tailNode.next.compareAndSet(null, node)) {
           done = true
           tail.compareAndSet(tailNode, node)
+          // println("New Node " + x)
         } else {
           var tailNode = tail.get
           var next = tailNode.next.get
@@ -64,10 +68,11 @@ class LFLinkedArrayList [T: ClassTag] extends ox.cads.collection.Queue[T] {
       val headNode = head.get
       val next = headNode.next.get
       val headIndex = headNode.head.get
-      val tailIndex = headNode.tail.get
-      if (headIndex == tailIndex && next == null)
-        return None
+      var tailIndex = headNode.tail.get
 
+      if (headIndex == tailIndex && next == null) {
+        return None
+      }
       // head node is not empty or head node is empty but head.next != null.
       assert(tailIndex <= size)
       if (headIndex < tailIndex) {
