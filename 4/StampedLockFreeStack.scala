@@ -1,16 +1,15 @@
 import ox.cads.atomic.AtomicPair
 import ox.cads.collection.TotalStack
-import ox.cads.util.ThreadID
 import scala.util.Random
 
-class StampedLockFreeStack[T](p : Int) extends TotalStack[T] {
+class StampedLockFreeStack[T] extends TotalStack[T] {
   private class Node(v : T) {
     var stampedNext = new AtomicPair[Node, Int](null, 0)
     var value: T = v
   }
 
   private val top = new AtomicPair[Node, Int](null, 0)
-  private val freeList = Array.fill(p)(null : Node)
+  private val freeList = new ThreadLocal[Node]
   private val random = new scala.util.Random
   
   private var recycled = 0
@@ -19,17 +18,22 @@ class StampedLockFreeStack[T](p : Int) extends TotalStack[T] {
   private def pause = ox.cads.util.NanoSpin(random.nextInt(500))
 
   private def recycleOrCreate(value : T) : Node = {
-    val id = ThreadID.get % p
-    if (freeList(id) == null) {
+    if (freeList.get == null) {
       created += 1
       new Node(value)
     } else {
       recycled += 1
-      val n = freeList(id)
-      freeList(id) = n.stampedNext.getFirst
+      val n = freeList.get
+      freeList.set(n.stampedNext.getFirst)
       n.value = value
       n
     }
+  }
+
+  private def recycle(n : Node, stamp : Int) = {
+    val firstFreeNode = freeList.get
+    n.stampedNext.set(firstFreeNode, stamp+1)
+    freeList = n 
   }
 
   def recycleRate: (Int, Int) = (recycled, created)
@@ -59,12 +63,9 @@ class StampedLockFreeStack[T](p : Int) extends TotalStack[T] {
         if(top.compareAndSet((oldTop, stamp), (newTop, stamp+1))) {
           result = Some(oldTop.value)
           done = true
-          
+
           // Recycle oldTop.
-          val id = ThreadID.get % p
-          val firstFreeNode = freeList(id)
-          oldTop.stampedNext.set(firstFreeNode, stamp+1)
-          freeList(id) = oldTop
+          recycle(oldTop, stamp)
         }
         else pause
       }

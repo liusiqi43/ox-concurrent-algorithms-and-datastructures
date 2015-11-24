@@ -32,7 +32,7 @@ object Test {
     val t0 = System.nanoTime
     var (r, c) = (0, 0)
     for (i <- 0 until reps) {
-      val conc= new SLFS(threads)
+      val conc= new SLFS
       val seq= Stack[Int]()
       val tester = new DFSLinearizabilityTester(seq, conc, threads, worker _, 800)
       assert (tester() > 0)
