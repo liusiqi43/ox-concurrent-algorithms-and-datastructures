@@ -76,7 +76,7 @@ object Test {
       val tester = new DFSLinearizabilityTester(seqQueue, concQueue, 4, worker _, 800)
       assert (tester() > 0)
     }
-    println("[AP Lock-free queue] test time taken: " + (System.nanoTime - t3)/1e6 + "ms")
+    println("[Lock-free AP queue] test time taken: " + (System.nanoTime - t3)/1e6 + "ms")
 
     val t1 = System.nanoTime
     for (i <- 0 until reps) {
