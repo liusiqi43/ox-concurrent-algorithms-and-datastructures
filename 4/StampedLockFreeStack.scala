@@ -33,7 +33,7 @@ class StampedLockFreeStack[T] extends TotalStack[T] {
   private def recycle(n : Node, stamp : Int) = {
     val firstFreeNode = freeList.get
     n.stampedNext.set(firstFreeNode, stamp+1)
-    freeList = n 
+    freeList.set(n)
   }
 
   def recycleRate: (Int, Int) = (recycled, created)
