@@ -1,9 +1,12 @@
 import ox.cads.atomic.AtomicPair
 import ox.cads.collection.TotalStack
+import ox.cads.util.ThreadID
 import scala.util.Random
 
-// StampedLockFreeStack uses a thread local pool by each thread 
-// with each thread recycling in its own thread local linked list. 
+// Shared free list stack use a shared common pool by all threads 
+// with each thread recycling in its own linked list. 
+// Each thread access and store recycled nodes in list[p] where p
+// is its threadID.
 //
 // Every next reference is associated with a stamp that is incremental
 // on each update. Essentially, the same stamp is never reused even when
@@ -11,14 +14,14 @@ import scala.util.Random
 //
 // The test script tests this specifically by setting the input range
 // narrow: 0..5.
-class StampedLockFreeStack[T] extends TotalStack[T] {
+class SharedFreeListStack[T](p : Int) extends TotalStack[T] {
   private class Node(v : T) {
     var stampedNext = new AtomicPair[Node, Int](null, 0)
     var value: T = v
   }
 
   private val top = new AtomicPair[Node, Int](null, 0)
-  private val freeList = new ThreadLocal[Node]
+  private val freeList = Array.fill(p)(null : Node)
   private val random = new scala.util.Random
   
   private var recycled = 0
@@ -27,22 +30,17 @@ class StampedLockFreeStack[T] extends TotalStack[T] {
   private def pause = ox.cads.util.NanoSpin(random.nextInt(500))
 
   private def recycleOrCreate(value : T) : Node = {
-    if (freeList.get == null) {
+    val id = ThreadID.get % p
+    if (freeList(id) == null) {
       created += 1
       new Node(value)
     } else {
       recycled += 1
-      val n = freeList.get
-      freeList.set(n.stampedNext.getFirst)
+      val n = freeList(id)
+      freeList(id) = n.stampedNext.getFirst
       n.value = value
       n
     }
-  }
-
-  private def recycle(n : Node, stamp : Int) = {
-    val firstFreeNode = freeList.get
-    n.stampedNext.set(firstFreeNode, stamp+1)
-    freeList.set(n)
   }
 
   def recycleRate: (Int, Int) = (recycled, created)
@@ -72,9 +70,12 @@ class StampedLockFreeStack[T] extends TotalStack[T] {
         if(top.compareAndSet((oldTop, stamp), (newTop, stamp+1))) {
           result = Some(oldTop.value)
           done = true
-
+          
           // Recycle oldTop.
-          recycle(oldTop, stamp)
+          val id = ThreadID.get % p
+          val firstFreeNode = freeList(id)
+          oldTop.stampedNext.set(firstFreeNode, stamp+1)
+          freeList(id) = oldTop
         }
         else pause
       }

@@ -6,6 +6,7 @@ import scala.util.Random
 object Test {
   type C = ox.cads.collection.TotalStack[Int]
   type SLFS =  StampedLockFreeStack[Int]
+  type SFLFS =  SharedFreeListStack[Int]
   type S = Stack[Int]
     
   def seqPush(x: Int)(stack: S) : (Unit, S) = ((), stack.push(x))
@@ -32,14 +33,29 @@ object Test {
     val t0 = System.nanoTime
     var (r, c) = (0, 0)
     for (i <- 0 until reps) {
-      val conc= new SLFS
+      val conc= new SFLFS(threads)
+
       val seq= Stack[Int]()
       val tester = new DFSLinearizabilityTester(seq, conc, threads, worker _, 800)
       assert (tester() > 0)
       val (re, cr) = conc.recycleRate
       r += re; c += cr
     }
-    println("[Lock-free ABA stack] test time taken: " + (System.nanoTime - t0)/1e6 + "ms")
-    println("[Lock-free ABA stack] created: " + c + " recycled: " + r + " (" + r.toFloat/(r+c)+ ")")
+    println("[Shared Freelist Lock-free stack] test time taken: " + (System.nanoTime - t0)/1e6 + "ms")
+    println("[Shared Freelist Lock-free stack] created: " + c + " recycled: " + r + " (" + r.toFloat/(r+c)+ ")")
+
+    val t1 = System.nanoTime
+    r = 0; c = 0
+    for (i <- 0 until reps) {
+      val conc= new SLFS
+
+      val seq= Stack[Int]()
+      val tester = new DFSLinearizabilityTester(seq, conc, threads, worker _, 800)
+      assert (tester() > 0)
+      val (re, cr) = conc.recycleRate
+      r += re; c += cr
+    }
+    println("[ThreadLocal Lock-free ABA stack] test time taken: " + (System.nanoTime - t0)/1e6 + "ms")
+    println("[ThreadLocal Lock-free ABA stack] created: " + c + " recycled: " + r + " (" + r.toFloat/(r+c)+ ")")
   }
 }
